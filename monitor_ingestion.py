@@ -1,8 +1,8 @@
 import time
 import requests
 
-# nombre total de lignes dans movies.csv (header exclu)
-# source : wc -l DATA/movies.csv → 769,632
+# total number of rows in movies.csv (header excluded)
+# source: wc -l DATA/movies.csv → 769,632
 TOTAL_MOVIES  = 769632
 STALL_TIMEOUT = 20
 
