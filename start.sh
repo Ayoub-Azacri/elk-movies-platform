@@ -2,7 +2,9 @@
 
 echo "Démarrage de la stack ELK..."
 
-chmod 777 logs
+mkdir -p logs
+touch logs/sincedb_movies
+chmod 666 logs/sincedb_movies
 
 docker-compose up -d
 
