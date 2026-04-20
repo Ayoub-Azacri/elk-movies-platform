@@ -6,7 +6,13 @@ mkdir -p logs
 touch logs/sincedb_movies
 chmod 666 logs/sincedb_movies
 
-docker-compose up -d
+# Docker Compose v2 ships as "docker compose" (plugin), v1 as "docker-compose" (standalone).
+# Try v2 first and fall back to v1 so the script works on both setups.
+DOCKER_COMPOSE_CMD="docker compose"
+if ! docker compose version > /dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+fi
+$DOCKER_COMPOSE_CMD up -d --progress quiet 2>/dev/null || $DOCKER_COMPOSE_CMD up -d
 
 echo "En attente d'Elasticsearch..."
 until curl -sf http://localhost:9200 > /dev/null; do
