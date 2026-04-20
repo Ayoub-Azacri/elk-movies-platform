@@ -1,0 +1,113 @@
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "english_stop": {
+          "type": "stop",
+          "stopwords": "_english_"
+        },
+        "english_stemmer": {
+          "type": "stemmer",
+          "language": "english"
+        }
+      },
+      "analyzer": {
+        "english_movie_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "english_stop",
+            "english_stemmer"
+          ]
+        }
+      }
+    },
+    "index": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    }
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "@timestamp": {
+        "type": "date"
+      },
+      "id": {
+        "type": "integer"
+      },
+      "title": {
+        "type": "text",
+        "analyzer": "english_movie_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 512
+          }
+        }
+      },
+      "overview": {
+        "type": "text",
+        "analyzer": "english_movie_analyzer"
+      },
+      "tagline": {
+        "type": "text",
+        "analyzer": "english_movie_analyzer"
+      },
+      "original_language": {
+        "type": "keyword"
+      },
+      "status": {
+        "type": "keyword"
+      },
+      "release_date": {
+        "type": "keyword"
+      },
+      "popularity": {
+        "type": "float"
+      },
+      "vote_average": {
+        "type": "float"
+      },
+      "vote_count": {
+        "type": "integer"
+      },
+      "budget": {
+        "type": "long"
+      },
+      "revenue": {
+        "type": "long"
+      },
+      "runtime": {
+        "type": "integer"
+      },
+      "genres": {
+        "type": "keyword"
+      },
+      "keywords": {
+        "type": "keyword"
+      },
+      "credits": {
+        "type": "keyword"
+      },
+      "production_companies": {
+        "type": "keyword"
+      },
+      "recommendations": {
+        "type": "keyword"
+      },
+      "poster_path": {
+        "type": "keyword",
+        "index": false
+      },
+      "backdrop_path": {
+        "type": "keyword",
+        "index": false
+      },
+      "tags": {
+        "type": "keyword"
+      }
+    }
+  }
+}
