@@ -50,8 +50,19 @@ curl -s -X PUT http://localhost:9200/movies_raw/_settings \
   -H "Content-Type: application/json" \
   -d '{"index": {"number_of_replicas": 0}}' > /dev/null
 
+if curl -sf http://localhost:9200/movies_clean > /dev/null 2>&1; then
+    curl -s -X PUT http://localhost:9200/movies_clean/_settings \
+      -H "Content-Type: application/json" \
+      -d '{"index": {"number_of_replicas": 0}}' > /dev/null
+fi
+
+RAW_COUNT=$(curl -s "http://localhost:9200/movies_raw/_count" 2>/dev/null | "$PYTHON_CMD" -c "import sys,json; print(json.load(sys.stdin).get('count', 0))" 2>/dev/null || echo "N/A")
+CLEAN_COUNT=$(curl -s "http://localhost:9200/movies_clean/_count" 2>/dev/null | "$PYTHON_CMD" -c "import sys,json; print(json.load(sys.stdin).get('count', 0))" 2>/dev/null || echo "N/A")
+
 echo ""
 echo "Stack démarrée."
 echo "Kibana          -> http://localhost:5601"
 echo "Elasticsearch   -> http://localhost:9200"
+echo "movies_raw      -> $RAW_COUNT docs"
+echo "movies_clean    -> $CLEAN_COUNT docs"
 echo "Monitoring      -> $PYTHON_CMD monitor_ingestion.py"

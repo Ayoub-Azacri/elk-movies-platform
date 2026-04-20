@@ -12,9 +12,9 @@ STALL_TIMEOUT = 20
 DOCS_ATTENDUS = 662083
 
 
-def get_docs_stats():
+def get_count(index):
     try:
-        r = requests.get("http://127.0.0.1:9200/movies_raw/_stats/docs", timeout=5)
+        r = requests.get(f"http://127.0.0.1:9200/{index}/_stats/docs", timeout=5)
         r.raise_for_status()
         data = r.json()
         docs    = data["_all"]["primaries"]["docs"]
@@ -25,7 +25,7 @@ def get_docs_stats():
         return None, None
 
 
-print("Monitoring ingestion into movies_raw...")
+print("Monitoring ingestion into movies_raw and movies_clean...")
 print("=" * 60)
 
 prev_count  = 0
@@ -33,49 +33,53 @@ prev_time   = time.time()
 stall_since = None
 
 while True:
-    count, deleted = get_docs_stats()
+    raw_count, deleted = get_count("movies_raw")
+    clean_count, _     = get_count("movies_clean")
     now = time.time()
 
-    if count is None:
+    if raw_count is None:
         print("\rElasticsearch non accessible, on réessaie...", end="", flush=True)
         time.sleep(2)
         continue
 
     elapsed = now - prev_time
-    speed   = int((count - prev_count) / elapsed) if elapsed > 0 else 0
+    speed   = int((raw_count - prev_count) / elapsed) if elapsed > 0 else 0
 
     # Progress bar is calculated against DOCS_ATTENDUS so it reaches 100% correctly
-    percent    = min(count / DOCS_ATTENDUS, 1.0)
+    percent    = min(raw_count / DOCS_ATTENDUS, 1.0)
     bar_length = 20
     filled     = int(bar_length * percent)
     bar        = "█" * filled + "░" * (bar_length - filled)
 
+    clean_str = f"{clean_count:,}" if clean_count is not None else "N/A"
+
     print(
-        f"\r[{bar}] {count:,} / {DOCS_ATTENDUS:,} ({percent:.1%}) — {speed:,} docs/sec",
+        f"\r[{bar}] raw: {raw_count:,} — clean: {clean_str} ({percent:.1%}) — {speed:,} docs/sec",
         end="",
         flush=True,
     )
 
-    if count >= DOCS_ATTENDUS:
+    if raw_count >= DOCS_ATTENDUS:
         print("\n" + "=" * 60)
         print("Ingestion terminée.")
-        # Show how many raw CSV rows were dropped by Logstash
-        print(f"  Indexés  : {count:,} docs")
-        print(f"  Ignorés  : {TOTAL_MOVIES - count:,} lignes malformées ({(TOTAL_MOVIES - count) / TOTAL_MOVIES:.1%})")
+        print(f"  movies_raw   : {raw_count:,} docs")
+        print(f"  movies_clean : {clean_str} docs")
+        print(f"  Ignorés      : {TOTAL_MOVIES - raw_count:,} lignes malformées ({(TOTAL_MOVIES - raw_count) / TOTAL_MOVIES:.1%})")
         break
 
-    if count == prev_count:
+    if raw_count == prev_count:
         if stall_since is None:
             stall_since = now
         elif now - stall_since > STALL_TIMEOUT:
             print(f"\n\nAucune nouvelle opération depuis {STALL_TIMEOUT}s.")
-            print(f"Actifs    : {count:,}")
-            print(f"Supprimés : {deleted:,}")
-            print(f"Manquants : {TOTAL_MOVIES - count:,} / {TOTAL_MOVIES:,} ({percent:.1%})")
+            print(f"movies_raw   : {raw_count:,}")
+            print(f"movies_clean : {clean_str}")
+            print(f"Supprimés    : {deleted:,}")
+            print(f"Manquants    : {TOTAL_MOVIES - raw_count:,} / {TOTAL_MOVIES:,} ({percent:.1%})")
             break
     else:
         stall_since = None
 
-    prev_count = count
+    prev_count = raw_count
     prev_time  = now
     time.sleep(2)
