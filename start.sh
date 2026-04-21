@@ -12,12 +12,28 @@ DOCKER_COMPOSE_CMD="docker compose"
 if ! docker compose version > /dev/null 2>&1; then
     DOCKER_COMPOSE_CMD="docker-compose"
 fi
-$DOCKER_COMPOSE_CMD up -d --progress quiet 2>/dev/null || $DOCKER_COMPOSE_CMD up -d
+# Start Elasticsearch first so we can apply the explicit mapping before Logstash runs.
+# If Logstash starts before the index exists, it creates movies_clean with dynamic mapping.
+$DOCKER_COMPOSE_CMD up -d elasticsearch --progress quiet 2>/dev/null || $DOCKER_COMPOSE_CMD up -d elasticsearch
 
 echo "En attente d'Elasticsearch..."
 until curl -sf http://localhost:9200 > /dev/null; do
     sleep 2
 done
+
+# Pre-create movies_clean with explicit mapping before Logstash starts.
+# This prevents Logstash from creating the index with dynamic mapping on first index.
+if ! curl -sf http://localhost:9200/movies_clean > /dev/null 2>&1; then
+    if [ -f mapping/movies_clean_mapping.json ]; then
+        echo "Création de l'index movies_clean avec le mapping explicite..."
+        curl -s -X PUT "http://localhost:9200/movies_clean" \
+          -H "Content-Type: application/json" \
+          -d @mapping/movies_clean_mapping.json > /dev/null
+    fi
+fi
+
+# Start remaining services (logstash, kibana)
+$DOCKER_COMPOSE_CMD up -d --progress quiet 2>/dev/null || $DOCKER_COMPOSE_CMD up -d
 
 # Automatic Python detection
 if python3 --version > /dev/null 2>&1; then
