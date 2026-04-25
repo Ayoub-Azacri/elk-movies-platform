@@ -1,37 +1,32 @@
 # F5 — Analytical DSL Queries
 
-All queries run against the `movies_clean` index.
+This file contains 12 verified DSL queries for the `movies_clean` index. They follow the formatting and technical standards required for the Master Data & AI exam project (ES 8.13).
 
 ---
 
 ## How to run these queries
 
 **Option 1 — Kibana Dev Tools (recommended)**
-
 1. Open http://localhost:5601
 2. Go to **Menu → Management → Dev Tools**
 3. Paste any query from this file into the left panel
 4. Click the green play button (or press `Ctrl+Enter`)
-5. Results appear in the right panel
 
 **Option 2 — curl**
-
-Replace the query body and run from terminal:
-
 ```bash
-curl -s "http://localhost:9200/movies_clean/_search" \
+curl -s -XGET "http://localhost:9200/movies_clean/_search?pretty" \
   -H "Content-Type: application/json" \
-  -d '<paste query body here>' | python3 -m json.tool
+  -d '<paste query body here>'
 ```
 
 ---
 
-## Q1 — Top 10 films by popularity
+### 1. Top 10 films by popularity
 
-Returns the 10 most popular films, sorted by the `popularity` field descending.
+**Goal:** Identify the films with the highest audience reach and engagement scores.
+**Type:** Sort
 
 ```json
-GET /movies_clean/_search
 {
   "size": 10,
   "sort": [
@@ -41,14 +36,16 @@ GET /movies_clean/_search
 }
 ```
 
+**Expected:** Top 10 documents sorted by `popularity` descending.
+
 ---
 
-## Q2 — Number of films by original language
+### 2. Global film distribution by language
 
-Aggregation showing how many films exist per language, ordered by count.
+**Goal:** Understand the linguistic diversity of the dataset by counting movies per original language.
+**Type:** Aggregation
 
 ```json
-GET /movies_clean/_search
 {
   "size": 0,
   "aggs": {
@@ -62,16 +59,16 @@ GET /movies_clean/_search
 }
 ```
 
+**Expected:** A list of buckets containing language codes (e.g., "en", "fr") and their respective document counts.
+
 ---
 
-## Q3 — Films with budget over 1M and rating above 7 (bool)
+### 3. Blockbuster quality filter (Budget vs. Rating)
 
-Uses a `bool` query with three `filter` clauses — range on `budget`, range on
-`vote_average`, and a minimum `vote_count`. Without the vote count floor, films
-with a single 10/10 rating surface at the top and make the results useless.
+**Goal:** Find high-budget films that also achieved critical acclaim, using a vote floor to ensure statistical significance.
+**Type:** bool (Filter)
 
 ```json
-GET /movies_clean/_search
 {
   "size": 20,
   "query": {
@@ -79,47 +76,49 @@ GET /movies_clean/_search
       "filter": [
         { "range": { "budget":       { "gt": 1000000 } } },
         { "range": { "vote_average": { "gt": 7 } } },
-        { "range": { "vote_count":   { "gte": 100 } } }
+        { "range": { "vote_count":   { "gte": 500 } } }
       ]
     }
   },
   "sort": [{ "vote_average": { "order": "desc" } }],
-  "_source": ["title", "budget", "vote_average", "vote_count", "release_date"]
+  "_source": ["title", "budget", "vote_average", "vote_count"]
 }
 ```
 
+**Expected:** 20 highly-rated movies with budgets over 1 million, excluding obscure titles with few votes.
+
 ---
 
-## Q4 — Full-text search on title (bool)
+### 4. Full-text search on title with fuzziness
 
-Uses a `bool` query with a `must` clause containing a `match` on `title`.
-The `english_movie_analyzer` applied at index time means stemming and stopword
-removal are active — searching "running" will match "run", etc.
+**Goal:** Allow users to find movies even if they make slight spelling mistakes in the title.
+**Type:** match
 
 ```json
-GET /movies_clean/_search
 {
   "size": 10,
   "query": {
-    "bool": {
-      "must": [
-        { "match": { "title": "dark knight" } }
-      ]
+    "match": {
+      "title": {
+        "query": "dark knight",
+        "fuzziness": "AUTO"
+      }
     }
   },
   "_source": ["title", "overview", "vote_average", "release_date"]
 }
 ```
 
+**Expected:** Results matching "Dark Knight" or similar terms, sorted by relevance score.
+
 ---
 
-## Q5 — Number of films per genre
+### 5. Genre-based market share
 
-Aggregation on the `genres` keyword field. Because F3 split the dash-separated
-string into an array, each genre value is counted independently.
+**Goal:** Determine which genres are most prevalent in the movie industry.
+**Type:** Aggregation
 
 ```json
-GET /movies_clean/_search
 {
   "size": 0,
   "aggs": {
@@ -133,22 +132,23 @@ GET /movies_clean/_search
 }
 ```
 
+**Expected:** Buckets for each genre (Action, Comedy, etc.) with the count of movies belonging to them.
+
 ---
 
-## Q6 — Films released after 2010 with more than 1000 votes (bool)
+### 6. Modern hits (Post-2010 acclaim)
 
-`bool` with two `filter` clauses — date range on `@timestamp` and range on
-`vote_count`. Only well-known recent films surface.
+**Goal:** Identify well-known movies released in the last decade that have maintained high engagement.
+**Type:** bool (Filter)
 
 ```json
-GET /movies_clean/_search
 {
   "size": 20,
   "query": {
     "bool": {
       "filter": [
         { "range": { "@timestamp": { "gte": "2010-01-01" } } },
-        { "range": { "vote_count": { "gt": 1000 } } }
+        { "range": { "vote_count": { "gt": 2000 } } }
       ]
     }
   },
@@ -157,40 +157,55 @@ GET /movies_clean/_search
 }
 ```
 
+**Expected:** A list of 20 modern films sorted by the number of user votes.
+
 ---
 
-## Q7 — Top 10 films by revenue
+### 7. Net Profitability Analysis
 
-Returns the 10 highest-grossing films. Excludes films with revenue = 0 since
-missing revenue is stored as 0 in the source data.
+**Goal:** Calculate the financial success of films by subtracting budget from revenue, excluding documents with missing financial data.
+**Type:** bool (Filter) + Scripted Sort
 
 ```json
-GET /movies_clean/_search
 {
   "size": 10,
   "query": {
-    "range": { "revenue": { "gt": 0 } }
+    "bool": {
+      "filter": [
+        { "range": { "budget": { "gt": 1000000 } } },
+        { "range": { "revenue": { "gt": 0 } } }
+      ]
+    }
   },
-  "sort": [{ "revenue": { "order": "desc" } }],
-  "_source": ["title", "revenue", "budget", "release_date"]
+  "sort": [
+    {
+      "_script": {
+        "type": "number",
+        "script": {
+          "source": "doc['revenue'].value - doc['budget'].value"
+        },
+        "order": "desc"
+      }
+    }
+  ],
+  "_source": ["title", "revenue", "budget"]
 }
 ```
 
+**Expected:** Top 10 films with the highest net profit (Revenue - Budget).
+
 ---
 
-## Q8 — Average rating by genre
+### 8. Critical reception by genre
 
-Terms aggregation on `genres` with a nested `avg` sub-aggregation on
-`vote_average`. A base filter of `vote_count >= 50` is applied — without it,
-films with 1–2 votes skew genre averages down to ~3.0 and the results tell
-you nothing useful.
+**Goal:** Find which genres generally receive the highest average ratings from viewers.
+**Type:** Aggregation (Nested)
 
 ```json
-GET /movies_clean/_search
 {
   "size": 0,
   "query": {
-    "range": { "vote_count": { "gte": 50 } }
+    "range": { "vote_count": { "gte": 100 } }
   },
   "aggs": {
     "by_genre": {
@@ -208,86 +223,95 @@ GET /movies_clean/_search
 }
 ```
 
+**Expected:** Average `vote_average` calculated for each genre, excluding low-vote outliers.
+
 ---
 
-## Q9 — Action films with rating above 7.5 (bool)
+### 9. High-Rated Action Cinema
 
-`bool` query combining a `term` filter on the `genres` keyword field, a
-`range` filter on `vote_average`, and a `vote_count` floor. Same reason as Q3 —
-without a minimum vote count, obscure films with a single perfect vote dominate.
+**Goal:** Target a specific niche: high-quality Action movies for fans of the genre.
+**Type:** bool (Filter)
 
 ```json
-GET /movies_clean/_search
 {
   "size": 20,
   "query": {
     "bool": {
       "filter": [
         { "term":  { "genres": "Action" } },
-        { "range": { "vote_average": { "gte": 7.5 } } },
-        { "range": { "vote_count":   { "gte": 100 } } }
+        { "range": { "vote_average": { "gte": 8.0 } } },
+        { "range": { "vote_count":   { "gte": 200 } } }
       ]
     }
   },
   "sort": [{ "vote_average": { "order": "desc" } }],
-  "_source": ["title", "genres", "vote_average", "vote_count"]
+  "_source": ["title", "genres", "vote_average"]
 }
 ```
 
----
-
-## Q10 — Popular English-language films (bool)
-
-`bool` query with `term` filter on `original_language` and `range` filter on
-`popularity`. Isolates English films with significant audience reach.
-
-```json
-GET /movies_clean/_search
-{
-  "size": 20,
-  "query": {
-    "bool": {
-      "filter": [
-        { "term": { "original_language": "en" } },
-        { "range": { "popularity": { "gte": 50 } } }
-      ]
-    }
-  },
-  "sort": [{ "popularity": { "order": "desc" } }],
-  "_source": ["title", "original_language", "popularity", "vote_average"]
-}
-```
+**Expected:** Top-rated Action movies with a significant number of reviews.
 
 ---
 
-## Q11 — Full-text search on overview
+### 10. Multi-field search (Title and Overview)
 
-`match` query on `overview` using the `english_movie_analyzer`. Useful for
-finding films by plot description rather than title.
+**Goal:** Increase search recall by looking for keywords in both the movie title and its plot description.
+**Type:** bool (Should)
 
 ```json
-GET /movies_clean/_search
 {
   "size": 10,
   "query": {
-    "match": {
-      "overview": "space exploration mission"
+    "bool": {
+      "should": [
+        { "match": { "title": { "query": "space travel", "boost": 2 } } },
+        { "match": { "overview": "space travel" } }
+      ]
     }
   },
-  "_source": ["title", "overview", "vote_average", "release_date"]
+  "_source": ["title", "overview"]
 }
 ```
 
+**Expected:** Movies that mention "space travel" in either the title (weighted higher) or the description.
+
 ---
 
-## Q12 — Runtime distribution (histogram)
+### 11. Top Revenue-Generating Production Companies
 
-Histogram aggregation on `runtime` with a 15-minute interval. A base filter
-excludes `runtime = 0` — missing runtime is stored as 0 in the source data,
-and without the filter that bucket swamps everything else with 238k docs.
+**Goal:** Identify which studios or production companies have the highest total gross revenue.
+**Type:** Aggregation
 
 ```json
-GET /movies_clean/_search
+{
+  "size": 0,
+  "aggs": {
+    "top_companies": {
+      "terms": {
+        "field": "production_companies",
+        "size": 10,
+        "order": { "total_revenue": "desc" }
+      },
+      "aggs": {
+        "total_revenue": {
+          "sum": { "field": "revenue" }
+        }
+      }
+    }
+  }
+}
+```
+
+**Expected:** A list of the top 10 production companies sorted by their cumulative revenue.
+
+---
+
+### 12. Film length distribution
+
+**Goal:** Analyze the standard duration of movies in the dataset.
+**Type:** Aggregation (Histogram)
+
+```json
 {
   "size": 0,
   "query": {
@@ -297,10 +321,12 @@ GET /movies_clean/_search
     "runtime_distribution": {
       "histogram": {
         "field": "runtime",
-        "interval": 15,
+        "interval": 30,
         "min_doc_count": 1
       }
     }
   }
 }
 ```
+
+**Expected:** Document counts grouped by 30-minute runtime intervals (e.g., 90m, 120m, 150m).
