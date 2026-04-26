@@ -27,7 +27,7 @@ git --version
 ## Step 1 — Clone the repo
 
 ```bash
-git clone https://github.com/<org>/elk-movies-platform.git
+git clone https://github.com/Ayoub-Azacri/elk-movies-platform.git
 cd elk-movies-platform
 ```
 
