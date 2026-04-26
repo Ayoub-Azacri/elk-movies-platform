@@ -21,8 +21,8 @@ Youssef El Hajji owns the Docker Compose infrastructure and makes architectural 
 | F4 | Explicit mapping + custom analyzer | Omar Hakik  | Done |
 | F5 | 12 analytical DSL queries | Ayoub Azacri | Done |
 | F6 | Kibana dashboard (6 visualizations) | Youssef DEKHAIL| Done |
-| F7 | Documentation suite | Youssef DEKHAIL | In progress |
-| F8 | Search engine (full-text + filters) | Youssef El Hajji | Not started |
+| F7 | Documentation suite | Youssef DEKHAIL | Done |
+| F8 | Search engine (full-text + filters) | Youssef El Hajji | Done |
 
 ## Timeline
 
@@ -34,7 +34,7 @@ Youssef El Hajji owns the Docker Compose infrastructure and makes architectural 
 | April 18–22 | F7 documentation, F8 search engine, final review |
 | April 25, 2026 | Deadline — all deliverables submitted |
 
-The deadline is firm. F8 is the highest-risk item still open as of April 21.
+Deadline: April 25, 2026. All 8 features complete as of April 24.
 
 ## Git workflow
 

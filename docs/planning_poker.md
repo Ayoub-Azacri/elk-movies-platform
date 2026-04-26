@@ -14,8 +14,8 @@ Session held at project kickoff, April 2026. Estimates reflect complexity and un
 | F4 Explicit mapping | Define and apply explicit ES mapping for `movies_clean`: custom analyzer, `keyword`/`text` split, strict types. Reindex from `movies_raw`. | 8 | Omar Hakik | Done |
 | F5 Analytical DSL queries | 12 commented DSL queries in `docs/queries.md`. At least 5 must be `bool` queries. Required topics: top 10 by popularity, by language, budget + rating filter, full-text on title, aggregation by genre. | 5 | Ayoub Azacri| Done |
 | F6 Kibana dashboard | 6 visualizations: genre pie, films per year line, top 10 popularity bar, rating histogram, average budget by genre bar, language pie. Assembled into 1 dashboard. Export as `kibana_export.ndjson`. | 8 | Youssef DEKHAIL | Done |
-| F7 Documentation | `data_dictionary.md`, `data_cleaning.md`, `runbook.md`, `planning_poker.md`, `projet_management.md`, `demo_script.md`. | 5 | Youssef DEKHAIL| In progress |
-| F8 Search engine | Full-text search on `title` and `overview`. At least one exact filter (language, genre, or year). Free choice of tech (API or UI). | 13 | Youssef El Hajji | Not started |
+| F7 Documentation | `data_dictionary.md`, `data_cleaning.md`, `runbook.md`, `planning_poker.md`, `projet_management.md`, `demo_script.md`. | 5 | Youssef DEKHAIL| Done |
+| F8 Search engine | Full-text search on `title` and `overview`. At least one exact filter (language, genre, or year). Free choice of tech (API or UI). | 13 | Youssef El Hajji | Done |
 
 ## Total estimate
 
